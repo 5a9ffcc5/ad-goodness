@@ -1,0 +1,526 @@
+<!doctype html><html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><title>awesome html page</title><script>
+endpoint = '/elk/ad_data/_search?pretty';
+sent = new Array();
+xhr_number_of_results = 10;
+pad_width = 29;
+query = ''; latest = '';
+function handle_ajax(e) {
+  console.log(e);
+  try {
+    window.localStorage.setItem("cached_queries_"+e.target.responseURL.split("&q=").slice(-1),e.target.responseText);
+  } catch (x) {
+    console.log(x);
+    window.localStorage.clear();
+    window.localStorage.setItem("cached_queries_"+e.target.responseURL.split("&q=").slice(-1),e.target.responseText);
+  }
+  handle_result(e.target.responseURL.split("&q=").slice(-1),e.target.responseText);
+}
+function add_element(x) {
+  try {
+    var ou = xb64(x.dn).split(",OU").slice(1,2)[0].split("=").slice(1)[0];
+  } catch (e) {
+    var ou = "Unknown";
+  }
+  x["xgd_ou"] = ou;
+  var z = document.createElement("div");
+  z._source = x;
+
+  // Add nice properties
+  var button = document.createElement("button");
+  button.classList.add('icon');
+  try {
+    icon = String.fromCodePoint(({
+      "Users"                     : 0x1f464,
+      "Admins"                    : 0x1f46e,
+      "Computers"                 : 0x1f4bb,
+      "Deployment"                : 0x1f4bb,
+      "Servers"                   : 0x1F5A5,
+      "UserGroups"                : 0x1f465,
+      "Deactivated User Accounts" : 0x1f464,
+      "External Users"            : 0x1f464,
+    })[x["xgd_ou"]]);
+  } catch (e) {
+    icon = '?'
+  }
+  var detailed = document.createElement("pre");
+  detailed.appendChild(document.createTextNode(JSON.stringify(z._source,null,'\t')));
+  detailed.classList.add("invisible");
+
+
+  button.appendChild(document.createTextNode(icon));
+  button.addEventListener('click',function (e) {
+    var z = e.target.parentElement.lastElementChild.classList;
+    console.log(e);
+    if (z.contains("visible")) {
+      z.remove("visible");
+    } else {
+      z.add("visible");
+    }
+  });
+  z.appendChild(button);
+  if (["Users","Deactivated User Accounts"].indexOf(x["xgd_ou"]) > -1) {
+    var tta = document.createElement("span");
+    tta.classList.add("name_title");
+    tta.appendChild(document.createTextNode(["sn","givenName"].map(function (e) {return zb64(x[e]);}).join(" ")));
+    var ttb = document.createElement("span");
+    ttb.classList.add("name_info");
+    ttb.appendChild(document.createTextNode(" ( "+["title","company"].map(function (e) {return zb64(x[e]);}).join(" ")+" )"));
+    z.appendChild(tta);
+    z.appendChild(ttb);
+  } else {
+    if (["Computers","Deployment"].indexOf(x["xgd_ou"]) > -1) {
+      var tta = document.createElement("span");
+      tta.classList.add("name_title");
+      tta.appendChild(document.createTextNode(["dNSHostName"].map(function (e) {return zb64(x[e]);}).join(" ")));
+      var ttb = document.createElement("span");
+      ttb.classList.add("name_info");
+      ttb.appendChild(document.createTextNode(" ( "+zb64(x["operatingSystem"])+" )"));
+      z.appendChild(tta);
+      z.appendChild(ttb);
+    }
+  }
+  z.appendChild(document.createElement('br'));
+
+
+  // Add properties
+  [
+    "xgd_ou",
+    "dn",
+    "cn",
+    "mail",
+    "userPrincipalName",
+    "uid",
+    "name",
+    "personalTitle",
+    "displayName",
+    "givenName",
+    "sn",
+    "adminDescription",
+    "targetAddress",
+    "title",
+    "employeeType",
+    "manager",
+    "c",
+    "company",
+    "division",
+    "department",
+    "physicalDeliveryOfficeName",
+    "streetAddress",
+    "telephoneNumber",
+    "otherTelephone",
+    "mobile",
+    "proxyAddresses",
+    "msExchHideFromAddressLists",
+    "ipPhone",
+    "info",
+    "description",
+    "managedObjects",
+    "homeDirectory",
+    "msDFSR-RootPath",
+    "msDFSR-StagingPath",
+    "msDFSR-ConflictPath",
+    "managedBy",
+    "dNSHostName",
+    "operatingSystem",
+    "operatingSystemServicePack",
+    "operatingSystemVersion",
+    "sAMAccountName",
+    "dc",
+    "employeeID",
+    "extensionAttribute1",
+    "extensionAttribute2",
+    "extensionAttribute3",
+    "extensionAttribute4",
+    "extensionAttribute5",
+    "extensionAttribute6",
+    "extensionAttribute7",
+    "extensionAttribute8",
+    "extensionAttribute9",
+    "extensionAttribute10",
+    "extensionAttribute11",
+    "extensionAttribute12",
+    "extensionAttribute13",
+    "extensionAttribute14",
+    "extensionAttribute15",
+    "extensionAttribute16",
+    "extensionAttribute17",
+    "servicePrincipalName",
+    "wWWHomePage",
+    "badPwdCount",
+    "whenCreated_UNIX",
+    "msExchWhenMailboxCreated_UNIX",
+    "dSCorePropagationData_UNIX",
+    "msTSExpireDate_UNIX",
+    "badPasswordTime_w32",
+"lockoutTime_w32",
+    "lastLogonTimestamp_w32",
+    "lastLogon_w32",
+    "pwdLastSet_w32",
+    "accountExpires_w32",
+    "whenChanged_UNIX",
+"msDS-AuthenticatedAtDC",
+    "msDS-RevealedDSAs",
+    "printLanguage",
+    "printerName",
+    "printerShareName",
+    "portName",
+    "driverName",
+    "shortServerName",
+    "objectCategory",
+    "location",
+    "uNCName",
+    "url",
+
+  ].forEach(function (e) {
+    if (x[e] === undefined) {} else {
+      console.log(e);
+      console.log(x[e]);
+      console.log(xb64(x[e]));
+        makechild(z,e,xb64(x[e]));
+    }
+  });
+  z.classList.add("object");
+  z.classList.add(("ou_"+x["xgd_ou"]).replace(/ /g,'_'));
+  z.appendChild(detailed);
+  document.getElementById("objects").appendChild(z);
+}
+function makechild(p,n,t) {
+  if ([
+    "dn",
+    "manager",
+    "mail",
+    "uid",
+    "dNSHostName",
+    "managedBy",
+    "wWWHomePage",
+  ].indexOf(n) === -1) {
+    if (([
+	"proxyAddresses",
+	"servicePrincipalName",
+	"dSCorePropagationData_UNIX",
+	"msDS-RevealedDSAs",
+      "info",
+"msDS-AuthenticatedAtDC",
+      "managedObjects",
+	].indexOf(n) > -1) && (typeof(t) === "object")) {
+      var x = document.createElement('span');
+      x.classList.add("property");
+      x.classList.add("t_"+n);
+      for (var i = 0; i < t.length; i++) {
+        x.appendChild(document.createTextNode(pad(n,pad_width)+': '+t[t.length-(1+i)]));
+        x.appendChild(document.createElement('br'));
+      }
+      p.appendChild(x)
+    } else {
+      var x = document.createElement('span');
+      x.classList.add("property");
+      x.classList.add("t_"+n);
+      x.appendChild(document.createTextNode(pad(n,pad_width)+': '+t));
+      p.appendChild(x)
+    }
+  } else {
+    if (n == "wWWHomePage") {
+      // searchable
+      var x = document.createElement('span');
+      x.classList.add("property");
+      x.classList.add("t_"+n);
+      x.appendChild(document.createTextNode(pad(n,pad_width)+': '));
+      var a = document.createElement('a');
+      a.href = t
+      a.appendChild(document.createTextNode(t));
+      x.appendChild(a)
+      p.appendChild(x)
+    } else {
+      // searchable
+      var x = document.createElement('span');
+      x.classList.add("property");
+      x.classList.add("t_"+n);
+      x.appendChild(document.createTextNode(pad(n,pad_width)+': '));
+      if (getcookie("surf") === "true") {
+        var a = document.createElement('a');
+        a.href = document.location.href.split("#").slice(0,1) + '#' + t;
+        a.appendChild(document.createTextNode(t));
+        x.appendChild(a)
+      } else {
+        x.appendChild(document.createTextNode(t));
+      }
+      p.appendChild(x)
+    }
+  }
+  p.appendChild(document.createElement('br'));
+}
+function pad(t,n) {
+  if (t.length < n) {
+    return t+(" ".repeat(n - t.length));
+  } else {
+    return t;
+  }
+}
+base64_blacklist = [
+	"MEMBER",
+	"beelss",
+];
+function xb64(x) {
+  if (x.length < 4) { return x;}
+  if (typeof(x) === "object") {return x;}
+  if (typeof(x) === "number") {return x;}
+  if (base64_blacklist.indexOf(x) > -1) {return x;}
+  if (x===undefined) {return "";}
+  if ((x.match(/^[A-Z][a-z]+$/) === null) === false) {return x;}
+  if ((x.match(/^[A-Z ]+$/) === null) === false) {return x;}
+  try {return b64DecodeUnicode(x)} catch (e) {return x;}
+};
+function zb64(x){if (x===undefined) {return "";}if (xb64(x) == x) {return x;} else {return xb64(x);}}
+function b64DecodeUnicode(str) {
+		return decodeURIComponent(Array.prototype.map.call(atob(str), function(c) {
+					return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+					}).join(''))
+}
+
+function handle_result(search_term,search_result) {
+  try {search_term = decodeURIComponent(search_term).replace(/\+/g,' ');} catch (e) {}
+  //try {search_term = search_term.split("&").slice(-1)[0].split("=").slice(1).join("=")} catch (e) {}
+  if (document.getElementById("input").value == search_term) {
+    document.getElementById("input").style.border = "5px solid #8f8";
+    document.title = ">"+ search_term;
+    if (document.location.hash.slice(1) === search_term) {
+      // don't overwrite history
+    } else {
+      // push a new fake history line
+      history.pushState(null,null,document.location.origin+document.location.pathname+"#"+search_term)
+    }
+    latest = search_term;
+    x = JSON.parse(search_result);
+    try {
+      document.getElementById("out_container").innerText = '\n'+x.hits.hits.length+'\n'+JSON.stringify(x.hits.hits,null,'\t');
+    } catch (e) {
+      console.log("Unable to set JSON content");
+      console.log(x);
+    }
+    document.getElementById("objects").innerHTML = '';
+    document.getElementById("matches").innerHTML = '';
+    x.hits.hits.forEach(function(match) {
+      var scorespan = document.createElement("div");
+      scorespan.classList.add("scorespan");
+      var scorebar = document.createElement("span");
+      scorebar.innerText = Math.floor(100 * (parseFloat(match._score)))/100;
+      scorebar.classList.add("scorebar");
+      if (Math.floor(100 * (parseFloat(match._score) / 30)) < 100) {
+        scorebar.style.width = Math.floor(100 * (parseFloat(match._score) / 30))+'%';
+      } else {
+        scorebar.style.width = '100%';
+      }
+      scorespan.appendChild(scorebar);
+      document.getElementById("matches").appendChild(scorespan);
+      try {
+        var ou = xb64(match._source.dn).split(",OU").slice(1,2)[0].split("=").slice(1)[0];
+      } catch (e) {
+        var ou = "Unknown";
+      }
+      var match_type = document.createElement("span");
+      match_type.classList.add("match_type");
+      try {
+        icon = String.fromCodePoint(({
+          "Users"                     : 0x1f464,
+          "Admins"                    : 0x1f46e,
+          "Computers"                 : 0x1f4bb,
+          "Deployment"                : 0x1f4bb,
+          "Servers"                   : 0x1F5A5,
+          "UserGroups"                : 0x1f465,
+          "Deactivated User Accounts" : 0x1f464,
+          "External Users"            : 0x1f464,
+        })[ou]);
+      } catch (e) {
+        icon = '?';
+      }
+      match_type.classList.add("ou_"+ou.replace(/ /g,"_"));
+      match_type.innerText = icon + " " + ou;
+      document.getElementById("matches").appendChild(match_type);
+      document.getElementById("matches").appendChild(document.createTextNode(xb64(match._source.dn).split(",OU")[0].split("CN=").slice(1)[0]+"\n"));
+      document.getElementById("matches").appendChild(document.createElement('br'));
+      add_element(match._source);
+    });
+  } else {
+    console.log("Dropped useless result "+search_term+" did not match "+document.getElementById("input").value);
+  }
+}
+function search(e) {
+  var new_query = document.getElementById("input").value;
+  if ((new_query.length === 0) || (new_query === latest)) {
+    return;}
+  if (window.localStorage.getItem("cached_queries_"+new_query.replace(/ /g,"+")) === null) {
+    if ((sent[new_query] === undefined)){
+      console.log("sending query for "+new_query);
+      try {
+        sent[new_query.slice(0,new_query.length-1)].abort();
+        delete sent[new_query.slice(0,new_query.length-1)];
+      } catch (e) {};
+      query = new_query;
+      console.log(query);
+      xhr = new XMLHttpRequest();
+      xhr.onload = handle_ajax;
+      xhr.open('GET',endpoint + "&size="+xhr_number_of_results+"&q="+encodeURIComponent(query).replace(/%20/g,'+'));
+      sent[query] = xhr;
+      xhr.send();
+      document.getElementById("input").style.border = "5px solid #f88"
+    } else {
+      // drop call, ajax already sent and not cached
+      console.log("dropping call (!) "+new_query);
+    }
+  } else {
+    console.log("using cached result for "+new_query);
+    handle_result(new_query,window.localStorage.getItem("cached_queries_"+new_query.replace(/ /g,"+")));
+  }
+}
+function getcookie(x) {
+  var re = new RegExp("(?:(?:^|.*;\\s*)"+x+"\\s*\\=\\s*([^;]*).*$)|^.*$","g");
+  return document.cookie.replace(re, "$1");
+}
+function setcookie(n,v) {
+  document.cookie = n+"="+v;
+}
+function update_surf_button () {
+  if (getcookie("surf") === "true") {
+    document.getElementById("toggle_surf").innerText = "Surf mode : on ! "+String.fromCodePoint(0x1F3C4);
+    document.getElementById("toggle_surf").className = "surfing";
+  } else {
+    document.getElementById("toggle_surf").innerText = "Surf mode : off "+String.fromCodePoint(0x1F3C4);
+    document.getElementById("toggle_surf").className = "nosurf";
+  }
+}
+
+function main () {
+  ['keypress','keydown','keyup','change','input','click'].forEach(function(event_type) {
+    document.getElementById("input").addEventListener(event_type,search);});
+  document.getElementById("search_button").addEventListener("click",search);
+  window.addEventListener('keydown',function(e) {console.log(e);if (e.keyCode == 27) {window.localStorage.clear();}});
+  window.addEventListener('hashchange',function (e) {
+    document.getElementById("input").value = decodeURIComponent(window.location.hash.slice(1));
+    search();
+  });
+  if (window.location.hash.slice(1) == "") {
+  } else {
+    document.getElementById("input").value = decodeURIComponent(window.location.hash.slice(1));
+    search();
+  }
+  document.getElementById("ccb").addEventListener('click',function (e) {window.localStorage.clear();sent = new Array();latest="invalidated";});
+  document.getElementById("htb").addEventListener('click',function (e) {[...document.getElementsByTagName("a")].map(function (e) {e.href="mailto:";})});
+  document.getElementById("toggle_surf").addEventListener('click',function (e) {
+    if (getcookie("surf") === "true") {
+      setcookie("surf","false");
+    } else {
+      setcookie("surf","true");
+    }
+    update_surf_button();
+  })
+  document.getElementById("xhr_number_of_results").addEventListener('change',function (e) {
+    console.log(e);
+    window.localStorage.clear();
+    latest="invalidated";
+    sent = new Array();
+    xhr_number_of_results = e.target.valueAsNumber;
+    search(null);
+  });
+  document.getElementById("debug_button").addEventListener('click',function (e) {
+    var az = document.getElementById("out_container").classList;
+    console.log(az);
+    if (az.contains("visible")) {
+      az.remove("visible");
+    } else {
+      az.add("visible");
+    }
+  });
+
+  document.getElementById("help").addEventListener('click',function (e) {
+    var az = document.getElementById("help_text").classList;
+    console.log(az);
+    if (az.contains("visible")) {
+      az.remove("visible");
+    } else {
+      az.add("visible");
+    }
+  });
+  update_surf_button();
+}
+
+window.onload = main;
+</script><style>
+#input {
+  display:block;
+  margin:0 auto;border: #dad 5px solid;padding:5px;font-size:2em;
+      width: -webkit-fill-available;
+      width: -moz-available;
+      }
+button{font-size:1.3em;}
+.scorebar {
+  background:#adcaff;
+	height: 25px;  /* Can be anything */
+	position: relative;
+  display:inline-block;
+}
+.scorespan {
+  width:120px;
+  background:#ddd;
+  position: relative;
+  display: inline-block;
+  height: 100%;
+}
+.surfing {background:#dfd;}
+.nosurf {background:#fdd;}
+.match_type {min-width:400px;display:inline-block;background:#ffebdf;height:20px;}
+.ou_Users {background:#c8deff;}
+.ou_Deactivated_User_Accounts {background:#fff2db;}
+.ou_Admins{background:#fdd;}
+.ou_Computers{background:#dfd;}
+.ou_Deployment{background:#dfd;}
+.ou_UserGroups{background:#ddd;}
+.ou_External_Users{background:#ccf;}
+.ou_Sensitive{background:#ffcbbf;}
+.ou_Critical{background:#ff9780;}
+.ou_Servers{background:#cbffcf;}
+.name_title{font-weight:bold;font-family:normal;}
+.name_info{font-family:normal;}
+.object{border:solid 1px #666;
+  padding:2px;
+white-space:pre;
+  display:inline-block;
+    width:auto;
+      margin:10px;
+        font-family:monospace;
+ /*         max-width:600px;
+            overflow:scroll;
+              max-height:800px;*/
+}
+.visible {
+  display:inherit !important;
+}
+.invisible{display:none;}
+.icon{font-size:2em;}
+.property{display:inline-block;}
+</style></head>
+  <body>
+    <button id="search_button">Search !</button><button id="ccb">Clear cache</button><button id="htb">Remove links</button><button id="toggle_surf">Surf mode : off</button><input type="number" id="xhr_number_of_results" placeholder="results"></input><button id="help">Toggle help</button><br />
+    <div id="help_text" class="invisible">
+      <h2>What is this about ?</h2>
+      This is a HTML interface to the internal AD data, which is replicated in an elasticsearch instance. Just type something in he text box, and you should get results.<br />
+      The data is refreshed manually monthly, using a nice huge <tt>ldapsearch</tt> to dump the 1.5GB of text describing our company.
+      <h2>Buttons</h2>
+      <h3>Search</h3>
+      Initiate a search based on the textfield content, this should happen automatically on keystrokes, but you never know.<br />
+      <h3>Clear cache</h3>
+      This button clears the localStorage cache, which is used to cache the AJAX results. You should not have to click on this, as on each write error the localStorage should be cleared, but you never know. If the searches don't work, click on it and click search.<br />
+      <h3>Remove links</h3>
+      This button simply change all the links in the page to <tt>mailto:</tt>, so you can copypaste in an email without embedding in your emails the links to where this page is hosted.
+      <h3>Surf mode</h3>
+      Toggles the creation of clickable links to browse the data. Can be used to have a nice page without links at all instead of hrefs pointing to <tt>mailto:</tt>.a
+      <h3>results</h3>
+      This input field can be used to change the number of results, e.g. when you want more than the default (10) results.
+    </div>
+    <input id="input" type="text" autofocus />
+    <div id="matches"></div>
+    <div id="objects"></div>
+    <hr />
+  <button id="debug_button">show XHR answer</button>
+    <pre id="out_container" class="invisible"></pre>
+  </body>
+</html>
